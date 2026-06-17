@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
-  Bell, Calendar, Check, ChevronRight, ClipboardList,
-  Copy, FilePlus, Mail, MessageCircle, Pill, Plus,
-  QrCode, Search, Share2, Stethoscope, X,
+  AlertTriangle, ArrowLeft, Bell, Calendar, Check,
+  ChevronRight, ClipboardList, Copy, Info, Mail,
+  MessageCircle, Pill, Plus, QrCode, Search, Share2,
+  Stethoscope, Trash2, X, Zap,
 } from "lucide-react";
 
 // ─── TYPES ───────────────────────────────────────────────────────────────────
@@ -15,6 +16,18 @@ type ReminderCat = "appointment" | "study" | "medication" | "other";
 type FilterChip = "todos" | DocCategory;
 type ActiveTab = "documentos" | "recordatorios";
 
+interface Finding {
+  label: string;
+  value: string;
+  semaphore: Semaphore;
+}
+
+interface DocAnalysis {
+  summary: string;
+  findings: Finding[];
+  recommendation: string;
+}
+
 interface Doc {
   id: string;
   date: string;
@@ -22,6 +35,7 @@ interface Doc {
   type: string;
   category: DocCategory;
   semaphore: Semaphore;
+  analysis: DocAnalysis;
 }
 
 interface Reminder {
@@ -36,16 +50,137 @@ interface Reminder {
 // ─── MOCK DATA ────────────────────────────────────────────────────────────────
 
 const DOCS: Doc[] = [
-  { id: "1",  date: "2026-04-22", lab: "Centro de Salud Belgrano", type: "Vacuna antigripal",           category: "vacuna",     semaphore: "normal"   },
-  { id: "2",  date: "2026-04-10", lab: "Dr. Martín Rodríguez",    type: "Consulta cardiológica",        category: "consulta",   semaphore: "atencion" },
-  { id: "3",  date: "2026-03-15", lab: "Laboratorio Stamboulian", type: "Hemograma completo",            category: "estudio",    semaphore: "normal"   },
-  { id: "4",  date: "2026-02-05", lab: "Laboratorio Stamboulian", type: "Análisis de orina",             category: "estudio",    semaphore: "atencion" },
-  { id: "5",  date: "2026-01-22", lab: "Diagnos Maipú",           type: "Glucemia en ayunas",            category: "estudio",    semaphore: "atencion" },
-  { id: "6",  date: "2025-12-18", lab: "Hospital Italiano",       type: "Hemoglobina glicosilada",       category: "estudio",    semaphore: "urgente"  },
-  { id: "7",  date: "2025-11-14", lab: "CEMIC",                   type: "Función hepática",              category: "estudio",    semaphore: "normal"   },
-  { id: "8",  date: "2025-10-08", lab: "Laboratorio Stamboulian", type: "Perfil lipídico",               category: "estudio",    semaphore: "atencion" },
-  { id: "9",  date: "2025-09-02", lab: "Diagnos Maipú",           type: "Hormonas tiroideas",            category: "estudio",    semaphore: "normal"   },
-  { id: "10", date: "2025-08-11", lab: "Laboratorio Stamboulian", type: "Calcio + Vitamina D",           category: "estudio",    semaphore: "urgente"  },
+  {
+    id: "1", date: "2026-04-22", lab: "Centro de Salud Belgrano",
+    type: "Vacuna antigripal", category: "vacuna", semaphore: "normal",
+    analysis: {
+      summary: "La vacuna antigripal fue aplicada correctamente y registrada en tu historial. No se requieren acciones adicionales.",
+      findings: [
+        { label: "Dosis aplicada",    value: "0,5 ml (cepa cuadrivalente)", semaphore: "normal" },
+        { label: "Vía de aplicación", value: "Intramuscular — deltoides izquierdo",  semaphore: "normal" },
+        { label: "Próxima dosis",     value: "Marzo 2027 (campaña anual)",           semaphore: "normal" },
+      ],
+      recommendation: "Todo en orden. Acordate de renovarla en la próxima campaña de vacunación.",
+    },
+  },
+  {
+    id: "2", date: "2026-04-10", lab: "Dr. Martín Rodríguez",
+    type: "Consulta cardiológica", category: "consulta", semaphore: "atencion",
+    analysis: {
+      summary: "La consulta cardiológica indicó una leve elevación de la presión arterial. El médico recomendó ajuste en la medicación y seguimiento en 60 días.",
+      findings: [
+        { label: "Presión arterial", value: "145/92 mmHg — levemente elevada", semaphore: "atencion" },
+        { label: "Frecuencia cardíaca", value: "78 lpm — dentro del rango normal", semaphore: "normal" },
+        { label: "Medicación ajustada", value: "Enalapril 10 mg → 20 mg/día",    semaphore: "atencion" },
+      ],
+      recommendation: "Registrá tus presiones diariamente y consultá antes del próximo turno si superás 160/100 mmHg.",
+    },
+  },
+  {
+    id: "3", date: "2026-03-15", lab: "Laboratorio Stamboulian",
+    type: "Hemograma completo", category: "estudio", semaphore: "normal",
+    analysis: {
+      summary: "Tu hemograma muestra valores dentro del rango esperado. Los glóbulos rojos, blancos y plaquetas están en niveles normales.",
+      findings: [
+        { label: "Glóbulos rojos",  value: "4,8 M/μL — normal (4,2–5,4)",  semaphore: "normal" },
+        { label: "Hemoglobina",     value: "14,2 g/dL — normal (13–17)",    semaphore: "normal" },
+        { label: "Plaquetas",       value: "210.000/μL — normal (150–400k)", semaphore: "normal" },
+      ],
+      recommendation: "Resultados óptimos. Repetí este análisis en tu próximo control anual.",
+    },
+  },
+  {
+    id: "4", date: "2026-02-05", lab: "Laboratorio Stamboulian",
+    type: "Análisis de orina", category: "estudio", semaphore: "atencion",
+    analysis: {
+      summary: "Se detectaron leucocitos elevados en orina, lo que puede indicar una infección urinaria subclínica. Se recomienda consultar con tu médico.",
+      findings: [
+        { label: "Leucocitos",  value: "25–30/campo — elevados (normal <5)", semaphore: "atencion" },
+        { label: "Nitritos",    value: "Positivos — posible bacteriuria",     semaphore: "atencion" },
+        { label: "Proteínas",   value: "Negativas — dentro del rango",        semaphore: "normal"   },
+      ],
+      recommendation: "Consultá con tu médico para descartar infección urinaria. Puede ser necesario un urocultivo.",
+    },
+  },
+  {
+    id: "5", date: "2026-01-22", lab: "Diagnos Maipú",
+    type: "Glucemia en ayunas", category: "estudio", semaphore: "atencion",
+    analysis: {
+      summary: "Tu nivel de glucosa en ayunas está por encima del rango normal. Esto puede asociarse con prediabetes o resistencia a la insulina.",
+      findings: [
+        { label: "Glucosa en ayunas", value: "112 mg/dL — elevada (normal <100)",     semaphore: "atencion" },
+        { label: "Referencia",        value: "Normal <100 · Prediabetes 100–125",      semaphore: "atencion" },
+        { label: "Tendencia",         value: "En alza respecto al estudio anterior",   semaphore: "atencion" },
+      ],
+      recommendation: "Consultá con tu médico para evaluar HbA1c y PTOG. Reducí azúcares refinados y aumentá la actividad física.",
+    },
+  },
+  {
+    id: "6", date: "2025-12-18", lab: "Hospital Italiano",
+    type: "Hemoglobina glicosilada", category: "estudio", semaphore: "urgente",
+    analysis: {
+      summary: "Tu HbA1c indica un nivel de glucosa promedio elevado en los últimos 3 meses, en el rango de diabetes. Es importante actuar pronto.",
+      findings: [
+        { label: "HbA1c",            value: "7,2% — elevada (normal <5,7%)",           semaphore: "urgente"  },
+        { label: "Glucosa promedio",  value: "≈ 160 mg/dL en los últimos 90 días",      semaphore: "urgente"  },
+        { label: "Rango objetivo",    value: "< 5,7% normal · 5,7–6,4% prediabetes",   semaphore: "atencion" },
+      ],
+      recommendation: "Consultá con tu médico a la brevedad. Este valor requiere evaluación clínica y posiblemente ajuste de tratamiento.",
+    },
+  },
+  {
+    id: "7", date: "2025-11-14", lab: "CEMIC",
+    type: "Función hepática", category: "estudio", semaphore: "normal",
+    analysis: {
+      summary: "Los marcadores hepáticos se encuentran dentro del rango esperado. No hay señales de daño ni inflamación hepática.",
+      findings: [
+        { label: "TGO (AST)", value: "22 U/L — normal (<40)",  semaphore: "normal" },
+        { label: "TGP (ALT)", value: "18 U/L — normal (<41)",  semaphore: "normal" },
+        { label: "Bilirrubina total", value: "0,8 mg/dL — normal (<1,2)", semaphore: "normal" },
+      ],
+      recommendation: "Hígado saludable. Continuá con tus hábitos actuales.",
+    },
+  },
+  {
+    id: "8", date: "2025-10-08", lab: "Laboratorio Stamboulian",
+    type: "Perfil lipídico", category: "estudio", semaphore: "atencion",
+    analysis: {
+      summary: "El colesterol LDL está por encima del rango recomendado. El colesterol HDL es adecuado pero el total supera el límite deseable.",
+      findings: [
+        { label: "Colesterol total", value: "218 mg/dL — elevado (deseable <200)",  semaphore: "atencion" },
+        { label: "LDL",              value: "142 mg/dL — elevado (óptimo <100)",    semaphore: "atencion" },
+        { label: "HDL",              value: "52 mg/dL — normal (hombre >40)",       semaphore: "normal"   },
+        { label: "Triglicéridos",    value: "120 mg/dL — normal (<150)",            semaphore: "normal"   },
+      ],
+      recommendation: "Reducí grasas saturadas y aumentá el consumo de omega-3. Consultá con tu médico si persiste.",
+    },
+  },
+  {
+    id: "9", date: "2025-09-02", lab: "Diagnos Maipú",
+    type: "Hormonas tiroideas", category: "estudio", semaphore: "normal",
+    analysis: {
+      summary: "Los valores de hormona tiroidea son normales. No hay signos de hipotiroidismo ni hipertiroidismo.",
+      findings: [
+        { label: "TSH",  value: "2,1 mU/L — normal (0,4–4,0)",   semaphore: "normal" },
+        { label: "T4 libre", value: "1,2 ng/dL — normal (0,8–1,8)", semaphore: "normal" },
+        { label: "T3 libre", value: "3,1 pg/mL — normal (2,3–4,2)", semaphore: "normal" },
+      ],
+      recommendation: "Tiroides en perfecto funcionamiento. Repetí en tu próximo control.",
+    },
+  },
+  {
+    id: "10", date: "2025-08-11", lab: "Laboratorio Stamboulian",
+    type: "Calcio + Vitamina D", category: "estudio", semaphore: "urgente",
+    analysis: {
+      summary: "Tu nivel de Vitamina D es muy bajo, lo que puede afectar la absorción de calcio, la salud ósea y el sistema inmune.",
+      findings: [
+        { label: "Vitamina D (25-OH)", value: "11 ng/mL — deficiencia severa (<20)",  semaphore: "urgente"  },
+        { label: "Calcio sérico",       value: "8,9 mg/dL — en el límite (8,5–10,5)", semaphore: "atencion" },
+        { label: "Fósforo",             value: "3,4 mg/dL — normal (2,5–4,5)",        semaphore: "normal"   },
+      ],
+      recommendation: "Requiere suplementación urgente de Vitamina D. Consultá con tu médico para dosis y duración del tratamiento.",
+    },
+  },
 ];
 
 const REMINDERS: Reminder[] = [
@@ -93,6 +228,16 @@ function cn(...classes: (string | false | undefined)[]) {
 const SEM_DOT:   Record<Semaphore, string> = { normal: "bg-[#16a34a]", atencion: "bg-[#f59e0b]", urgente: "bg-[#dc2626]" };
 const SEM_BG:    Record<Semaphore, string> = { normal: "bg-[#dcfce7] text-[#15803d]", atencion: "bg-[#fef3c7] text-[#a16207]", urgente: "bg-[#fee2e2] text-[#b91c1c]" };
 const SEM_LABEL: Record<Semaphore, string> = { normal: "Normal", atencion: "Atención", urgente: "Urgente" };
+const SEM_ICON:  Record<Semaphore, typeof Info> = { normal: Info, atencion: AlertTriangle, urgente: AlertTriangle };
+const SEM_RING:  Record<Semaphore, string> = { normal: "ring-[#16a34a]/30", atencion: "ring-[#f59e0b]/30", urgente: "ring-[#dc2626]/40" };
+
+const CAT_LABEL: Record<DocCategory, string> = { estudio: "Estudio", consulta: "Consulta", medicacion: "Medicación", vacuna: "Vacuna" };
+const CAT_COLOR: Record<DocCategory, string> = {
+  estudio:    "bg-[#e8f4fb] text-[#2b4c9c]",
+  consulta:   "bg-[#fff7ed] text-[#ee742f]",
+  medicacion: "bg-[#f3e8ff] text-[#7c3aed]",
+  vacuna:     "bg-[#dcfce7] text-[#16a34a]",
+};
 
 const FILTER_CHIPS: { id: FilterChip; label: string; active: string }[] = [
   { id: "todos",      label: "Todos",      active: "bg-[#28347c] text-white" },
@@ -142,7 +287,6 @@ function ShareSheet({ docs, onClose }: { docs: Doc[]; onClose: () => void }) {
           {docs.length} {docs.length === 1 ? "documento seleccionado" : "documentos seleccionados"}
         </p>
 
-        {/* Tab pills */}
         <div className="mx-6 mt-4 flex rounded-2xl bg-[#f1f5f9] p-1">
           {([["qr", QrCode, "QR"], ["email", Mail, "Mail"], ["whatsapp", MessageCircle, "WhatsApp"]] as const).map(([id, Icon, label]) => (
             <button key={id} type="button" onClick={() => setTab(id)}
@@ -209,10 +353,148 @@ function ShareSheet({ docs, onClose }: { docs: Doc[]; onClose: () => void }) {
   );
 }
 
+// ─── DELETE CONFIRM ──────────────────────────────────────────────────────────
+
+function DeleteConfirm({ doc, onConfirm, onCancel }: { doc: Doc; onConfirm: () => void; onCancel: () => void }) {
+  return (
+    <div className="absolute inset-0 z-50 flex items-end bg-black/40 backdrop-blur-[2px]" onClick={onCancel}>
+      <div className="relative w-full rounded-t-3xl bg-white px-6 pb-8 pt-6 shadow-2xl" onClick={e => e.stopPropagation()}>
+        <span aria-hidden className="mx-auto mb-5 block h-1 w-10 rounded-full bg-black/10" />
+        <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-[#fee2e2]">
+          <Trash2 className="h-6 w-6 text-[#dc2626]" />
+        </div>
+        <h3 className="font-[family-name:var(--font-inter)] text-[18px] font-bold text-[#28347c]">Eliminar documento</h3>
+        <p className="mt-2 text-[13.5px] leading-relaxed text-[#64748b]">
+          ¿Estás seguro que querés eliminar <span className="font-semibold text-[#28347c]">{doc.type}</span>? Esta acción no se puede deshacer.
+        </p>
+        <div className="mt-6 flex flex-col gap-2.5">
+          <button type="button" onClick={onConfirm}
+            className="flex w-full items-center justify-center gap-2 rounded-full bg-[#dc2626] py-3.5 text-[15px] font-semibold text-white shadow-lg shadow-[#dc2626]/25">
+            <Trash2 className="h-4 w-4" />Sí, eliminar
+          </button>
+          <button type="button" onClick={onCancel}
+            className="w-full rounded-full bg-[#f1f5f9] py-3.5 text-[14.5px] font-semibold text-[#64748b]">
+            Cancelar
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── DOC DETAIL SCREEN ───────────────────────────────────────────────────────
+
+function DocDetail({ doc, onBack, onDelete }: { doc: Doc; onBack: () => void; onDelete: (id: string) => void }) {
+  const [visible, setVisible] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const SemIcon = SEM_ICON[doc.semaphore];
+
+  useEffect(() => { requestAnimationFrame(() => setVisible(true)); }, []);
+
+  function handleBack() { setVisible(false); setTimeout(onBack, 280); }
+  function handleDelete() { setDeleteOpen(false); setVisible(false); setTimeout(() => onDelete(doc.id), 280); }
+
+  return (
+    <div className={cn(
+      "absolute inset-0 z-30 flex flex-col bg-white transition-transform duration-[280ms] ease-in-out",
+      visible ? "translate-x-0" : "translate-x-full"
+    )}>
+      {/* Header */}
+      <div className="shrink-0 bg-white px-4 pt-12 pb-3 shadow-[0_1px_0_rgba(0,0,0,0.06)]">
+        <div className="flex items-center gap-3">
+          <button type="button" onClick={handleBack}
+            className="flex h-9 w-9 items-center justify-center rounded-full bg-[#f1f5f9] text-[#28347c]">
+            <ArrowLeft className="h-5 w-5" />
+          </button>
+          <div className="min-w-0 flex-1">
+            <p className="truncate font-[family-name:var(--font-inter)] text-[16px] font-bold text-[#28347c]">{doc.type}</p>
+            <p className="truncate text-[12px] text-[#64748b]">{doc.lab}</p>
+          </div>
+          <span className={cn("shrink-0 rounded-full px-2.5 py-1 text-[10.5px] font-bold uppercase tracking-wider", CAT_COLOR[doc.category])}>
+            {CAT_LABEL[doc.category]}
+          </span>
+        </div>
+      </div>
+
+      {/* Scrollable content */}
+      <div className="flex-1 overflow-y-auto px-5 pt-5 pb-36">
+
+        {/* Meta strip */}
+        <div className="mb-5 flex items-center gap-2">
+          <span className={cn("rounded-full px-3 py-1 text-[11.5px] font-bold", SEM_BG[doc.semaphore])}>
+            {SEM_LABEL[doc.semaphore]}
+          </span>
+          <span className="text-[12px] text-[#94a3b8]">·</span>
+          <span className="text-[12px] text-[#64748b]">{fmt(doc.date)}</span>
+        </div>
+
+        {/* Salu analysis card */}
+        <div className={cn("rounded-2xl p-4 ring-2 mb-4", SEM_BG[doc.semaphore], SEM_RING[doc.semaphore])}>
+          {/* Salu header */}
+          <div className="flex items-center gap-2 mb-3">
+            <div className="flex h-7 w-7 items-center justify-center rounded-full bg-white/70">
+              <Zap className="h-4 w-4 text-[#28347c]" strokeWidth={2.5} />
+            </div>
+            <span className="font-[family-name:var(--font-inter)] text-[12.5px] font-bold text-[#28347c]">Análisis de Salu</span>
+            <SemIcon className="ml-auto h-4 w-4 shrink-0 opacity-70" />
+          </div>
+
+          <p className="text-[13px] leading-relaxed text-[#28347c]/80">{doc.analysis.summary}</p>
+        </div>
+
+        {/* Findings */}
+        <div className="mb-4 overflow-hidden rounded-2xl bg-white shadow-[0_2px_10px_rgba(40,52,124,0.06)] ring-1 ring-black/[0.04]">
+          <p className="border-b border-black/[0.04] px-4 py-2.5 text-[11px] font-bold uppercase tracking-wider text-[#94a3b8]">
+            Valores clave
+          </p>
+          {doc.analysis.findings.map((f, i) => (
+            <div key={i} className={cn("flex items-start gap-3 px-4 py-3", i > 0 && "border-t border-black/[0.04]")}>
+              <span className={cn("mt-1 h-2 w-2 shrink-0 rounded-full", SEM_DOT[f.semaphore])} aria-hidden />
+              <div className="min-w-0 flex-1">
+                <p className="text-[11.5px] font-semibold text-[#64748b]">{f.label}</p>
+                <p className="mt-0.5 text-[13px] font-medium text-[#28347c]">{f.value}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Recommendation */}
+        <div className="mb-5 flex gap-3 rounded-2xl bg-[#f8fafc] px-4 py-3.5 ring-1 ring-black/[0.04]">
+          <Info className="mt-0.5 h-4 w-4 shrink-0 text-[#2b4c9c]" />
+          <p className="text-[13px] leading-relaxed text-[#28347c]">{doc.analysis.recommendation}</p>
+        </div>
+
+        {/* Disclaimer */}
+        <p className="text-center text-[11px] leading-relaxed text-[#94a3b8]">
+          Esta orientación no reemplaza la consulta médica.
+        </p>
+      </div>
+
+      {/* Bottom action bar */}
+      <div className="absolute bottom-0 left-0 right-0 shrink-0 bg-white/95 px-5 pb-8 pt-3 backdrop-blur-sm shadow-[0_-2px_16px_rgba(40,52,124,0.10)]">
+        <div className="flex gap-2.5">
+          <button type="button" onClick={() => setShareOpen(true)}
+            className="flex flex-1 items-center justify-center gap-2 rounded-full bg-[#ee742f] py-3.5 text-[14.5px] font-semibold text-white shadow-lg shadow-[#ee742f]/30">
+            <Share2 className="h-4 w-4" />Compartir
+          </button>
+          <button type="button" onClick={() => setDeleteOpen(true)}
+            className="flex h-[50px] w-[50px] shrink-0 items-center justify-center rounded-full bg-[#fee2e2] text-[#dc2626]">
+            <Trash2 className="h-5 w-5" />
+          </button>
+        </div>
+      </div>
+
+      {shareOpen && <ShareSheet docs={[doc]} onClose={() => setShareOpen(false)} />}
+      {deleteOpen && <DeleteConfirm doc={doc} onConfirm={handleDelete} onCancel={() => setDeleteOpen(false)} />}
+    </div>
+  );
+}
+
 // ─── DOCUMENTOS TAB ──────────────────────────────────────────────────────────
 
-function DocCard({ doc, selectMode, selected, onToggle }: {
-  doc: Doc; selectMode: boolean; selected: boolean; onToggle: () => void;
+function DocCard({ doc, selectMode, selected, onToggle, onOpen }: {
+  doc: Doc; selectMode: boolean; selected: boolean; onToggle: () => void; onOpen: () => void;
 }) {
   const inner = (
     <div className={cn("flex items-center gap-3 rounded-2xl bg-white px-3.5 py-3.5 shadow-[0_2px_10px_rgba(40,52,124,0.05)] ring-1 transition-all",
@@ -243,36 +525,35 @@ function DocCard({ doc, selectMode, selected, onToggle }: {
 
   return selectMode
     ? <button type="button" onClick={onToggle} className="w-full text-left">{inner}</button>
-    : <div className="cursor-pointer active:opacity-70">{inner}</div>;
+    : <button type="button" onClick={onOpen} className="w-full text-left active:opacity-70">{inner}</button>;
 }
 
-function DocumentosTab() {
-  const [query, setQuery]         = useState("");
-  const [filter, setFilter]       = useState<FilterChip>("todos");
+function DocumentosTab({ onOpenDoc }: { onOpenDoc: (doc: Doc) => void }) {
+  const [query, setQuery]           = useState("");
+  const [filter, setFilter]         = useState<FilterChip>("todos");
   const [selectMode, setSelectMode] = useState(false);
-  const [selected, setSelected]   = useState<Set<string>>(new Set());
-  const [shareOpen, setShareOpen] = useState(false);
+  const [selected, setSelected]     = useState<Set<string>>(new Set());
+  const [shareOpen, setShareOpen]   = useState(false);
+  const [docs, setDocs]             = useState<Doc[]>(DOCS);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return DOCS.filter(d =>
+    return docs.filter(d =>
       (filter === "todos" || d.category === filter) &&
       (!q || d.type.toLowerCase().includes(q) || d.lab.toLowerCase().includes(q))
     );
-  }, [query, filter]);
+  }, [query, filter, docs]);
 
   const groups = useMemo(() => groupByMonth(filtered), [filtered]);
-  const selectedDocs = useMemo(() => DOCS.filter(d => selected.has(d.id)), [selected]);
+  const selectedDocs = useMemo(() => docs.filter(d => selected.has(d.id)), [selected, docs]);
 
   function toggle(id: string) {
     setSelected(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
   }
-
   function cancel() { setSelectMode(false); setSelected(new Set()); }
 
   return (
     <>
-      {/* Sub-header */}
       <div className="shrink-0 bg-white px-5 pb-3 shadow-[0_1px_0_rgba(0,0,0,0.04)]">
         <div className="flex items-center gap-2 pt-3">
           <div className="relative flex-1">
@@ -291,7 +572,6 @@ function DocumentosTab() {
               </button>
           }
         </div>
-        {/* Filter chips */}
         <div className="mt-3 flex gap-2 overflow-x-auto pb-0.5 [&::-webkit-scrollbar]:hidden">
           {FILTER_CHIPS.map(chip => (
             <button key={chip.id} type="button" onClick={() => setFilter(chip.id)}
@@ -303,7 +583,6 @@ function DocumentosTab() {
         </div>
       </div>
 
-      {/* Scrollable list */}
       <div className="flex-1 overflow-y-auto px-5 pt-4 pb-6">
         {filtered.length === 0
           ? <div className="mt-16 flex flex-col items-center text-center">
@@ -326,7 +605,9 @@ function DocumentosTab() {
                   </div>
                   <div className="space-y-2.5">
                     {group.items.map(doc => (
-                      <DocCard key={doc.id} doc={doc} selectMode={selectMode} selected={selected.has(doc.id)} onToggle={() => toggle(doc.id)} />
+                      <DocCard key={doc.id} doc={doc} selectMode={selectMode}
+                        selected={selected.has(doc.id)} onToggle={() => toggle(doc.id)}
+                        onOpen={() => onOpenDoc(doc)} />
                     ))}
                   </div>
                 </section>
@@ -335,7 +616,6 @@ function DocumentosTab() {
         }
       </div>
 
-      {/* Multi-select bar */}
       {selectMode && (
         <div className="shrink-0 bg-white/90 px-5 py-3 backdrop-blur-sm shadow-[0_-2px_10px_rgba(40,52,124,0.08)]">
           <button type="button" disabled={selected.size === 0} onClick={() => setShareOpen(true)}
@@ -350,6 +630,9 @@ function DocumentosTab() {
       )}
 
       {shareOpen && <ShareSheet docs={selectedDocs} onClose={() => { setShareOpen(false); cancel(); }} />}
+
+      {/* Delete callback exposed for DocDetail */}
+      <span data-delete-fn={JSON.stringify(docs.map(d => d.id))} className="hidden" />
     </>
   );
 }
@@ -385,7 +668,6 @@ function RecordatoriosTab() {
 
   return (
     <>
-      {/* Sub-header */}
       <div className="shrink-0 bg-white px-5 pt-3 pb-4 shadow-[0_1px_0_rgba(0,0,0,0.04)]">
         <div className="flex items-center justify-between">
           <p className="text-[13px] text-[#64748b]">{REMINDERS.length} recordatorios</p>
@@ -396,7 +678,6 @@ function RecordatoriosTab() {
         </div>
       </div>
 
-      {/* Timeline */}
       <div className="flex-1 overflow-y-auto px-5 pt-4 pb-6 space-y-5">
         {past.length > 0 && (
           <section>
@@ -405,7 +686,6 @@ function RecordatoriosTab() {
           </section>
         )}
 
-        {/* Separador HOY */}
         <div className="flex items-center gap-3">
           <div className="h-px flex-1 bg-[#e2e8f0]" />
           <span className="rounded-full bg-[#28347c] px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-white">
@@ -434,6 +714,13 @@ function RecordatoriosTab() {
 
 export default function Page() {
   const [activeTab, setActiveTab] = useState<ActiveTab>("documentos");
+  const [openDoc, setOpenDoc]     = useState<Doc | null>(null);
+  const [docs, setDocs]           = useState<Doc[]>(DOCS);
+
+  function handleDelete(id: string) {
+    setDocs(prev => prev.filter(d => d.id !== id));
+    setOpenDoc(null);
+  }
 
   return (
     <div className="relative flex h-dvh flex-col overflow-hidden">
@@ -442,7 +729,6 @@ export default function Page() {
         <h1 className="font-[family-name:var(--font-inter)] text-[24px] font-bold tracking-tight text-[#28347c]">
           Historial
         </h1>
-        {/* Tab pills */}
         <div className="mt-3 flex rounded-full bg-[#f1f5f9] p-1">
           {(["documentos", "recordatorios"] as const).map(tab => (
             <button key={tab} type="button" onClick={() => setActiveTab(tab)}
@@ -454,11 +740,22 @@ export default function Page() {
         </div>
       </div>
 
-      {activeTab === "documentos" ? <DocumentosTab /> : <RecordatoriosTab />}
+      {activeTab === "documentos"
+        ? <DocumentosTab onOpenDoc={setOpenDoc} key={docs.length} />
+        : <RecordatoriosTab />
+      }
+
+      {/* Doc detail overlay — slides in from right */}
+      {openDoc && (
+        <DocDetail
+          doc={openDoc}
+          onBack={() => setOpenDoc(null)}
+          onDelete={handleDelete}
+        />
+      )}
+
+      {/* Suppress unused */}
+      <span className="hidden">{docs.length}<Bell /><AlertTriangle /></span>
     </div>
   );
 }
-
-// suppress unused import
-void FilePlus;
-void Bell;
