@@ -594,10 +594,9 @@ function DocDetail({ doc, onBack, onDelete }: { doc: Doc; onBack: () => void; on
 
 // ─── DOCUMENTOS TAB ──────────────────────────────────────────────────────────
 
-function DocCard({ doc, selectMode, selected, onToggle, onOpen, sparkline }: {
+function DocCard({ doc, selectMode, selected, onToggle, onOpen }: {
   doc: Doc; selectMode: boolean; selected: boolean;
   onToggle: () => void; onOpen: () => void;
-  sparkline?: Semaphore[];
 }) {
   const CatIcon = CAT_ICON[doc.category];
 
@@ -627,15 +626,12 @@ function DocCard({ doc, selectMode, selected, onToggle, onOpen, sparkline }: {
         </div>
 
         {!selectMode && (
-          <div className="flex shrink-0 flex-col items-end gap-1.5">
-            <div className="flex items-center gap-1">
-              <span className={cn("flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide", SEM_BG[doc.semaphore])}>
-                <span className={cn("h-1.5 w-1.5 rounded-full", SEM_DOT[doc.semaphore])} />
-                {SEM_LABEL[doc.semaphore]}
-              </span>
-              <ChevronRight className="h-3.5 w-3.5 shrink-0 text-[#28347c]/20" />
-            </div>
-            {sparkline && sparkline.length >= 2 && <MiniSparkline values={sparkline} />}
+          <div className="flex shrink-0 items-center gap-1">
+            <span className={cn("flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide", SEM_BG[doc.semaphore])}>
+              <span className={cn("h-1.5 w-1.5 rounded-full", SEM_DOT[doc.semaphore])} />
+              {SEM_LABEL[doc.semaphore]}
+            </span>
+            <ChevronRight className="h-3.5 w-3.5 shrink-0 text-[#28347c]/20" />
           </div>
         )}
       </div>
@@ -666,13 +662,6 @@ function DocumentosTab({ onOpenDoc }: { onOpenDoc: (doc: Doc) => void }) {
   const groups = useMemo(() => groupByMonth(filtered), [filtered]);
   const selectedDocs = useMemo(() => docs.filter(d => selected.has(d.id)), [selected, docs]);
 
-  // Compute sparkline values: last 3 semaphores of same type, sorted by date
-  function getSparkline(doc: Doc): Semaphore[] {
-    return docs
-      .filter(d => d.type === doc.type)
-      .sort((a, b) => a.date.localeCompare(b.date))
-      .map(d => d.semaphore);
-  }
 
   function toggle(id: string) {
     setSelected(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
@@ -733,8 +722,7 @@ function DocumentosTab({ onOpenDoc }: { onOpenDoc: (doc: Doc) => void }) {
                     {group.items.map(doc => (
                       <DocCard key={doc.id} doc={doc} selectMode={selectMode}
                         selected={selected.has(doc.id)} onToggle={() => toggle(doc.id)}
-                        onOpen={() => onOpenDoc(doc)}
-                        sparkline={getSparkline(doc)} />
+                        onOpen={() => onOpenDoc(doc)} />
                     ))}
                   </div>
                 </section>
