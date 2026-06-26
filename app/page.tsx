@@ -627,9 +627,8 @@ function DocCard({ doc, selectMode, selected, onToggle, onOpen }: {
 
         {!selectMode && (
           <div className="flex shrink-0 items-center gap-1">
-            <span className={cn("flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide", SEM_BG[doc.semaphore])}>
-              <span className={cn("h-1.5 w-1.5 rounded-full", SEM_DOT[doc.semaphore])} />
-              {SEM_LABEL[doc.semaphore]}
+            <span className={cn("flex h-7 w-7 items-center justify-center rounded-full", SEM_BG[doc.semaphore])}>
+              <span className={cn("h-2.5 w-2.5 rounded-full", SEM_DOT[doc.semaphore])} />
             </span>
             <ChevronRight className="h-3.5 w-3.5 shrink-0 text-[#28347c]/20" />
           </div>
