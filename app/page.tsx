@@ -3,15 +3,15 @@
 import { useState, useMemo, useEffect } from "react";
 import {
   AlertTriangle, ArrowLeft, Bell, Calendar, Check,
-  ChevronRight, ClipboardList, Copy, Info, Mail,
-  MessageCircle, Pill, Plus, QrCode, Search, Share2,
+  ChevronRight, ClipboardList, Copy, FlaskConical, Info, Mail,
+  MessageCircle, Pill, Plus, QrCode, Scan, Search, Share2,
   Stethoscope, Trash2, X, Zap,
 } from "lucide-react";
 
 // ─── TYPES ───────────────────────────────────────────────────────────────────
 
 type Semaphore = "normal" | "atencion" | "urgente";
-type DocCategory = "estudio" | "consulta" | "medicacion" | "vacuna";
+type DocCategory = "laboratorio" | "imagen";
 type ReminderCat = "appointment" | "study" | "medication" | "other";
 type FilterChip = "todos" | DocCategory;
 type ActiveTab = "documentos" | "recordatorios";
@@ -51,47 +51,21 @@ interface Reminder {
 
 const DOCS: Doc[] = [
   {
-    id: "1", date: "2026-04-22", lab: "Centro de Salud Belgrano",
-    type: "Vacuna antigripal", category: "vacuna", semaphore: "normal",
-    analysis: {
-      summary: "La vacuna antigripal fue aplicada correctamente y registrada en tu historial. No se requieren acciones adicionales.",
-      findings: [
-        { label: "Dosis aplicada",    value: "0,5 ml (cepa cuadrivalente)", semaphore: "normal" },
-        { label: "Vía de aplicación", value: "Intramuscular — deltoides izquierdo",  semaphore: "normal" },
-        { label: "Próxima dosis",     value: "Marzo 2027 (campaña anual)",           semaphore: "normal" },
-      ],
-      recommendation: "Todo en orden. Acordate de renovarla en la próxima campaña de vacunación.",
-    },
-  },
-  {
-    id: "2", date: "2026-04-10", lab: "Dr. Martín Rodríguez",
-    type: "Consulta cardiológica", category: "consulta", semaphore: "atencion",
-    analysis: {
-      summary: "La consulta cardiológica indicó una leve elevación de la presión arterial. El médico recomendó ajuste en la medicación y seguimiento en 60 días.",
-      findings: [
-        { label: "Presión arterial", value: "145/92 mmHg — levemente elevada", semaphore: "atencion" },
-        { label: "Frecuencia cardíaca", value: "78 lpm — dentro del rango normal", semaphore: "normal" },
-        { label: "Medicación ajustada", value: "Enalapril 10 mg → 20 mg/día",    semaphore: "atencion" },
-      ],
-      recommendation: "Registrá tus presiones diariamente y consultá antes del próximo turno si superás 160/100 mmHg.",
-    },
-  },
-  {
-    id: "3", date: "2026-03-15", lab: "Laboratorio Stamboulian",
-    type: "Hemograma completo", category: "estudio", semaphore: "normal",
+    id: "1", date: "2026-03-15", lab: "Laboratorio Stamboulian",
+    type: "Hemograma completo", category: "laboratorio", semaphore: "normal",
     analysis: {
       summary: "Tu hemograma muestra valores dentro del rango esperado. Los glóbulos rojos, blancos y plaquetas están en niveles normales.",
       findings: [
-        { label: "Glóbulos rojos",  value: "4,8 M/μL — normal (4,2–5,4)",  semaphore: "normal" },
-        { label: "Hemoglobina",     value: "14,2 g/dL — normal (13–17)",    semaphore: "normal" },
+        { label: "Glóbulos rojos",  value: "4,8 M/μL — normal (4,2–5,4)",   semaphore: "normal" },
+        { label: "Hemoglobina",     value: "14,2 g/dL — normal (13–17)",     semaphore: "normal" },
         { label: "Plaquetas",       value: "210.000/μL — normal (150–400k)", semaphore: "normal" },
       ],
       recommendation: "Resultados óptimos. Repetí este análisis en tu próximo control anual.",
     },
   },
   {
-    id: "4", date: "2026-02-05", lab: "Laboratorio Stamboulian",
-    type: "Análisis de orina", category: "estudio", semaphore: "atencion",
+    id: "2", date: "2026-02-05", lab: "Laboratorio Stamboulian",
+    type: "Análisis de orina", category: "laboratorio", semaphore: "atencion",
     analysis: {
       summary: "Se detectaron leucocitos elevados en orina, lo que puede indicar una infección urinaria subclínica. Se recomienda consultar con tu médico.",
       findings: [
@@ -103,82 +77,134 @@ const DOCS: Doc[] = [
     },
   },
   {
-    id: "5", date: "2026-01-22", lab: "Diagnos Maipú",
-    type: "Glucemia en ayunas", category: "estudio", semaphore: "atencion",
+    id: "3", date: "2026-01-22", lab: "Diagnos Maipú",
+    type: "Glucemia en ayunas", category: "laboratorio", semaphore: "atencion",
     analysis: {
       summary: "Tu nivel de glucosa en ayunas está por encima del rango normal. Esto puede asociarse con prediabetes o resistencia a la insulina.",
       findings: [
-        { label: "Glucosa en ayunas", value: "112 mg/dL — elevada (normal <100)",     semaphore: "atencion" },
-        { label: "Referencia",        value: "Normal <100 · Prediabetes 100–125",      semaphore: "atencion" },
-        { label: "Tendencia",         value: "En alza respecto al estudio anterior",   semaphore: "atencion" },
+        { label: "Glucosa en ayunas", value: "112 mg/dL — elevada (normal <100)",   semaphore: "atencion" },
+        { label: "Referencia",        value: "Normal <100 · Prediabetes 100–125",    semaphore: "atencion" },
+        { label: "Tendencia",         value: "En alza respecto al estudio anterior", semaphore: "atencion" },
       ],
       recommendation: "Consultá con tu médico para evaluar HbA1c y PTOG. Reducí azúcares refinados y aumentá la actividad física.",
     },
   },
   {
-    id: "6", date: "2025-12-18", lab: "Hospital Italiano",
-    type: "Hemoglobina glicosilada", category: "estudio", semaphore: "urgente",
+    id: "4", date: "2025-12-18", lab: "Hospital Italiano",
+    type: "Hemoglobina glicosilada", category: "laboratorio", semaphore: "urgente",
     analysis: {
       summary: "Tu HbA1c indica un nivel de glucosa promedio elevado en los últimos 3 meses, en el rango de diabetes. Es importante actuar pronto.",
       findings: [
-        { label: "HbA1c",            value: "7,2% — elevada (normal <5,7%)",           semaphore: "urgente"  },
-        { label: "Glucosa promedio",  value: "≈ 160 mg/dL en los últimos 90 días",      semaphore: "urgente"  },
-        { label: "Rango objetivo",    value: "< 5,7% normal · 5,7–6,4% prediabetes",   semaphore: "atencion" },
+        { label: "HbA1c",           value: "7,2% — elevada (normal <5,7%)",         semaphore: "urgente"  },
+        { label: "Glucosa promedio", value: "≈ 160 mg/dL en los últimos 90 días",    semaphore: "urgente"  },
+        { label: "Rango objetivo",   value: "< 5,7% normal · 5,7–6,4% prediabetes", semaphore: "atencion" },
       ],
       recommendation: "Consultá con tu médico a la brevedad. Este valor requiere evaluación clínica y posiblemente ajuste de tratamiento.",
     },
   },
   {
-    id: "7", date: "2025-11-14", lab: "CEMIC",
-    type: "Función hepática", category: "estudio", semaphore: "normal",
+    id: "5", date: "2025-11-14", lab: "CEMIC",
+    type: "Función hepática", category: "laboratorio", semaphore: "normal",
     analysis: {
       summary: "Los marcadores hepáticos se encuentran dentro del rango esperado. No hay señales de daño ni inflamación hepática.",
       findings: [
-        { label: "TGO (AST)", value: "22 U/L — normal (<40)",  semaphore: "normal" },
-        { label: "TGP (ALT)", value: "18 U/L — normal (<41)",  semaphore: "normal" },
-        { label: "Bilirrubina total", value: "0,8 mg/dL — normal (<1,2)", semaphore: "normal" },
+        { label: "TGO (AST)",        value: "22 U/L — normal (<40)",         semaphore: "normal" },
+        { label: "TGP (ALT)",        value: "18 U/L — normal (<41)",         semaphore: "normal" },
+        { label: "Bilirrubina total", value: "0,8 mg/dL — normal (<1,2)",    semaphore: "normal" },
       ],
       recommendation: "Hígado saludable. Continuá con tus hábitos actuales.",
     },
   },
   {
-    id: "8", date: "2025-10-08", lab: "Laboratorio Stamboulian",
-    type: "Perfil lipídico", category: "estudio", semaphore: "atencion",
+    id: "6", date: "2025-10-08", lab: "Laboratorio Stamboulian",
+    type: "Perfil lipídico", category: "laboratorio", semaphore: "atencion",
     analysis: {
       summary: "El colesterol LDL está por encima del rango recomendado. El colesterol HDL es adecuado pero el total supera el límite deseable.",
       findings: [
-        { label: "Colesterol total", value: "218 mg/dL — elevado (deseable <200)",  semaphore: "atencion" },
-        { label: "LDL",              value: "142 mg/dL — elevado (óptimo <100)",    semaphore: "atencion" },
-        { label: "HDL",              value: "52 mg/dL — normal (hombre >40)",       semaphore: "normal"   },
-        { label: "Triglicéridos",    value: "120 mg/dL — normal (<150)",            semaphore: "normal"   },
+        { label: "Colesterol total", value: "218 mg/dL — elevado (deseable <200)", semaphore: "atencion" },
+        { label: "LDL",              value: "142 mg/dL — elevado (óptimo <100)",   semaphore: "atencion" },
+        { label: "HDL",              value: "52 mg/dL — normal (hombre >40)",      semaphore: "normal"   },
+        { label: "Triglicéridos",    value: "120 mg/dL — normal (<150)",           semaphore: "normal"   },
       ],
       recommendation: "Reducí grasas saturadas y aumentá el consumo de omega-3. Consultá con tu médico si persiste.",
     },
   },
   {
-    id: "9", date: "2025-09-02", lab: "Diagnos Maipú",
-    type: "Hormonas tiroideas", category: "estudio", semaphore: "normal",
+    id: "7", date: "2025-09-02", lab: "Diagnos Maipú",
+    type: "Hormonas tiroideas", category: "laboratorio", semaphore: "normal",
     analysis: {
       summary: "Los valores de hormona tiroidea son normales. No hay signos de hipotiroidismo ni hipertiroidismo.",
       findings: [
-        { label: "TSH",  value: "2,1 mU/L — normal (0,4–4,0)",   semaphore: "normal" },
-        { label: "T4 libre", value: "1,2 ng/dL — normal (0,8–1,8)", semaphore: "normal" },
-        { label: "T3 libre", value: "3,1 pg/mL — normal (2,3–4,2)", semaphore: "normal" },
+        { label: "TSH",      value: "2,1 mU/L — normal (0,4–4,0)",    semaphore: "normal" },
+        { label: "T4 libre", value: "1,2 ng/dL — normal (0,8–1,8)",   semaphore: "normal" },
+        { label: "T3 libre", value: "3,1 pg/mL — normal (2,3–4,2)",   semaphore: "normal" },
       ],
       recommendation: "Tiroides en perfecto funcionamiento. Repetí en tu próximo control.",
     },
   },
   {
-    id: "10", date: "2025-08-11", lab: "Laboratorio Stamboulian",
-    type: "Calcio + Vitamina D", category: "estudio", semaphore: "urgente",
+    id: "8", date: "2025-08-11", lab: "Laboratorio Stamboulian",
+    type: "Calcio + Vitamina D", category: "laboratorio", semaphore: "urgente",
     analysis: {
       summary: "Tu nivel de Vitamina D es muy bajo, lo que puede afectar la absorción de calcio, la salud ósea y el sistema inmune.",
       findings: [
         { label: "Vitamina D (25-OH)", value: "11 ng/mL — deficiencia severa (<20)",  semaphore: "urgente"  },
-        { label: "Calcio sérico",       value: "8,9 mg/dL — en el límite (8,5–10,5)", semaphore: "atencion" },
-        { label: "Fósforo",             value: "3,4 mg/dL — normal (2,5–4,5)",        semaphore: "normal"   },
+        { label: "Calcio sérico",      value: "8,9 mg/dL — en el límite (8,5–10,5)", semaphore: "atencion" },
+        { label: "Fósforo",            value: "3,4 mg/dL — normal (2,5–4,5)",        semaphore: "normal"   },
       ],
       recommendation: "Requiere suplementación urgente de Vitamina D. Consultá con tu médico para dosis y duración del tratamiento.",
+    },
+  },
+  /* Históricas para sparkline de tendencia */
+  {
+    id: "9", date: "2024-09-10", lab: "Laboratorio Stamboulian",
+    type: "Hemograma completo", category: "laboratorio", semaphore: "normal",
+    analysis: {
+      summary: "Hemograma completo dentro del rango esperado.",
+      findings: [
+        { label: "Glóbulos rojos", value: "4,6 M/μL — normal",  semaphore: "normal" },
+        { label: "Hemoglobina",    value: "13,9 g/dL — normal", semaphore: "normal" },
+        { label: "Plaquetas",      value: "198.000/μL — normal", semaphore: "normal" },
+      ],
+      recommendation: "Resultados normales. Continuar con controles anuales.",
+    },
+  },
+  {
+    id: "10", date: "2024-08-20", lab: "Diagnos Maipú",
+    type: "Glucemia en ayunas", category: "laboratorio", semaphore: "normal",
+    analysis: {
+      summary: "Glucemia en ayunas dentro del rango normal.",
+      findings: [
+        { label: "Glucosa en ayunas", value: "88 mg/dL — normal (normal <100)", semaphore: "normal" },
+      ],
+      recommendation: "Valores normales. Mantener hábitos saludables.",
+    },
+  },
+  /* Imágenes médicas */
+  {
+    id: "11", date: "2026-03-20", lab: "Diagnos Maipú",
+    type: "Radiografía de tórax", category: "imagen", semaphore: "normal",
+    analysis: {
+      summary: "La radiografía de tórax no muestra alteraciones significativas. Campos pulmonares libres, silueta cardíaca dentro de límites normales.",
+      findings: [
+        { label: "Campos pulmonares", value: "Libres, sin infiltrados ni opacidades", semaphore: "normal" },
+        { label: "Silueta cardíaca",  value: "Índice cardiotorácico 0,45 — normal",   semaphore: "normal" },
+        { label: "Trama vascular",    value: "Sin alteraciones",                        semaphore: "normal" },
+      ],
+      recommendation: "Sin hallazgos patológicos. Control según criterio médico.",
+    },
+  },
+  {
+    id: "12", date: "2025-07-15", lab: "Centro de Diagnóstico Belgrano",
+    type: "Ecografía abdominal", category: "imagen", semaphore: "atencion",
+    analysis: {
+      summary: "Se observó leve esteatosis hepática grado I. El resto de los órganos abdominales sin alteraciones ecográficas significativas.",
+      findings: [
+        { label: "Hígado",   value: "Esteatosis grado I — consultar médico", semaphore: "atencion" },
+        { label: "Vesícula", value: "Sin litiasis, pared normal",             semaphore: "normal"   },
+        { label: "Riñones",  value: "Forma, tamaño y ecogenicidad normales",  semaphore: "normal"   },
+      ],
+      recommendation: "La esteatosis grado I puede revertirse con cambios en la dieta. Consultá con tu médico gastroenterólogo.",
     },
   },
 ];
@@ -231,20 +257,24 @@ const SEM_LABEL: Record<Semaphore, string> = { normal: "Normal", atencion: "Aten
 const SEM_ICON:  Record<Semaphore, typeof Info> = { normal: Info, atencion: AlertTriangle, urgente: AlertTriangle };
 const SEM_RING:  Record<Semaphore, string> = { normal: "ring-[#16a34a]/30", atencion: "ring-[#f59e0b]/30", urgente: "ring-[#dc2626]/40" };
 
-const CAT_LABEL: Record<DocCategory, string> = { estudio: "Estudio", consulta: "Consulta", medicacion: "Medicación", vacuna: "Vacuna" };
-const CAT_COLOR: Record<DocCategory, string> = {
-  estudio:    "bg-[#e8f4fb] text-[#2b4c9c]",
-  consulta:   "bg-[#fff7ed] text-[#ee742f]",
-  medicacion: "bg-[#f3e8ff] text-[#7c3aed]",
-  vacuna:     "bg-[#dcfce7] text-[#16a34a]",
+const CAT_LABEL:  Record<DocCategory, string> = { laboratorio: "Laboratorio", imagen: "Imagen" };
+const CAT_COLOR:  Record<DocCategory, string> = {
+  laboratorio: "bg-[#e0f9ff] text-[#0369a1]",
+  imagen:      "bg-[#f3e8ff] text-[#7c3aed]",
+};
+const CAT_ACCENT: Record<DocCategory, string> = {
+  laboratorio: "bg-[#0891b2]",
+  imagen:      "bg-[#7c3aed]",
+};
+const CAT_ICON: Record<DocCategory, typeof FlaskConical> = {
+  laboratorio: FlaskConical,
+  imagen:      Scan,
 };
 
 const FILTER_CHIPS: { id: FilterChip; label: string; active: string }[] = [
-  { id: "todos",      label: "Todos",      active: "bg-[#28347c] text-white" },
-  { id: "estudio",    label: "Estudios",   active: "bg-[#e8f4fb] text-[#2b4c9c]" },
-  { id: "consulta",   label: "Consultas",  active: "bg-[#fff7ed] text-[#ee742f]" },
-  { id: "medicacion", label: "Medicación", active: "bg-[#f3e8ff] text-[#7c3aed]" },
-  { id: "vacuna",     label: "Vacunas",    active: "bg-[#dcfce7] text-[#16a34a]" },
+  { id: "todos",       label: "Todos",       active: "bg-[#28347c] text-white" },
+  { id: "laboratorio", label: "Laboratorio", active: "bg-[#e0f9ff] text-[#0369a1]" },
+  { id: "imagen",      label: "Imágenes",    active: "bg-[#f3e8ff] text-[#7c3aed]" },
 ];
 
 const REM_ICON:  Record<ReminderCat, typeof Stethoscope> = {
@@ -259,6 +289,77 @@ const REM_TINT: Record<ReminderCat, string> = {
   medication:  "bg-[#eaf6ee] text-[#2e8b57]",
   other:       "bg-[#e8f4fb] text-[#2b4c9c]",
 };
+
+// ─── MINI SPARKLINE ──────────────────────────────────────────────────────────
+
+function MiniSparkline({ values }: { values: Semaphore[] }) {
+  if (values.length < 2) return null;
+  const pts = values.slice(-3);
+  const yMap: Record<Semaphore, number> = { normal: 13, atencion: 7, urgente: 2 };
+  const cMap: Record<Semaphore, string> = { normal: "#16a34a", atencion: "#f59e0b", urgente: "#dc2626" };
+  const W = 38, H = 16, step = W / (pts.length - 1);
+  const coords = pts.map((s, i) => ({ x: i * step, y: yMap[s], c: cMap[s] }));
+  const path = coords.map((p, i) => `${i === 0 ? "M" : "L"}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
+  const last = coords[coords.length - 1];
+
+  return (
+    <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} fill="none" aria-hidden>
+      <path d={path} stroke="#e2e8f0" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+      <path d={path} stroke={last.c} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" opacity="0.6" />
+      <circle cx={last.x} cy={last.y} r="2.5" fill={last.c} />
+    </svg>
+  );
+}
+
+// ─── SALU CHARACTER ──────────────────────────────────────────────────────────
+
+function SaluBot({ size = 28 }: { size?: number }) {
+  // Full Salu character — waving pose, matches brandbook mascot
+  const h = Math.round(size * 1.4);
+  return (
+    <svg width={size} height={h} viewBox="0 0 36 50" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
+      <defs>
+        <linearGradient id="saluBody" x1="36" y1="0" x2="4" y2="50" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stopColor="#f5924a" />
+          <stop offset="100%" stopColor="#e05e1a" />
+        </linearGradient>
+      </defs>
+      {/* Body — S/zigzag shape */}
+      <path
+        d="M23 2C31 1 38 7 33 14L19 25C29 25 37 32 31 39L20 48C13 50 5 46 9 39L21 29C11 29 4 22 10 15Z"
+        fill="url(#saluBody)"
+      />
+      {/* Inner shadow on body */}
+      <path
+        d="M19 25L21 29C11 29 4 22 10 15L23 2C16 4 10 10 15 17Z"
+        fill="#c8531a" opacity="0.22"
+      />
+      {/* Eyes */}
+      <ellipse cx="23" cy="14" rx="3.2" ry="3.2" fill="white" />
+      <ellipse cx="30" cy="11" rx="3.2" ry="3.2" fill="white" />
+      <circle cx="24" cy="14.6" r="1.6" fill="#16193a" />
+      <circle cx="31" cy="11.6" r="1.6" fill="#16193a" />
+      <circle cx="24.7" cy="13.8" r="0.6" fill="white" />
+      <circle cx="31.7" cy="10.8" r="0.6" fill="white" />
+      {/* Eyebrows */}
+      <path d="M21 11 Q23 10 25 11" stroke="#16193a" strokeWidth="1" strokeLinecap="round" fill="none" />
+      <path d="M28 8 Q30 7 32 8" stroke="#16193a" strokeWidth="1" strokeLinecap="round" fill="none" />
+      {/* Smile */}
+      <path d="M21 18.5 Q25.5 22 30 19" stroke="#16193a" strokeWidth="1.3" strokeLinecap="round" fill="none" />
+      {/* Left arm — waving up */}
+      <line x1="14" y1="19" x2="6" y2="10" stroke="#16193a" strokeWidth="2.2" strokeLinecap="round" />
+      <circle cx="5" cy="8.5" r="2.5" fill="#16193a" />
+      {/* Right arm — relaxed */}
+      <line x1="25" y1="27" x2="32" y2="32" stroke="#16193a" strokeWidth="2.2" strokeLinecap="round" />
+      {/* Legs */}
+      <line x1="16" y1="46.5" x2="13" y2="50" stroke="#16193a" strokeWidth="2.5" strokeLinecap="round" />
+      <line x1="22" y1="47.5" x2="23" y2="50" stroke="#16193a" strokeWidth="2.5" strokeLinecap="round" />
+      {/* Feet */}
+      <path d="M10.5 50 L15.5 50" stroke="#16193a" strokeWidth="2" strokeLinecap="round" />
+      <path d="M21 50 L26 50" stroke="#16193a" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  );
+}
 
 // ─── SHARE SHEET ─────────────────────────────────────────────────────────────
 
@@ -397,19 +498,19 @@ function DocDetail({ doc, onBack, onDelete }: { doc: Doc; onBack: () => void; on
 
   return (
     <div className={cn(
-      "absolute inset-0 z-30 flex flex-col bg-white transition-transform duration-[280ms] ease-in-out",
+      "absolute inset-0 z-30 flex flex-col bg-white transition-transform duration-[280ms] ease-out",
       visible ? "translate-x-0" : "translate-x-full"
     )}>
-      {/* Header */}
-      <div className="shrink-0 bg-white px-4 pt-12 pb-3 shadow-[0_1px_0_rgba(0,0,0,0.06)]">
+      {/* Header — gradiente firma */}
+      <div className="shrink-0 bg-gradient-to-r from-[#2b4c9c] to-[#28347c] px-4 pt-12 pb-4 shadow-[0_2px_12px_rgba(40,52,124,0.25)]">
         <div className="flex items-center gap-3">
           <button type="button" onClick={handleBack}
-            className="flex h-9 w-9 items-center justify-center rounded-full bg-[#f1f5f9] text-[#28347c]">
+            className="flex h-9 w-9 items-center justify-center rounded-full bg-white/20 text-white active:bg-white/30 transition-colors">
             <ArrowLeft className="h-5 w-5" />
           </button>
           <div className="min-w-0 flex-1">
-            <p className="truncate font-[family-name:var(--font-inter)] text-[16px] font-bold text-[#28347c]">{doc.type}</p>
-            <p className="truncate text-[12px] text-[#64748b]">{doc.lab}</p>
+            <p className="truncate font-[family-name:var(--font-inter)] text-[16px] font-bold text-white">{doc.type}</p>
+            <p className="truncate text-[12px] text-white/60">{doc.lab}</p>
           </div>
           <span className={cn("shrink-0 rounded-full px-2.5 py-1 text-[10.5px] font-bold uppercase tracking-wider", CAT_COLOR[doc.category])}>
             {CAT_LABEL[doc.category]}
@@ -433,8 +534,8 @@ function DocDetail({ doc, onBack, onDelete }: { doc: Doc; onBack: () => void; on
         <div className={cn("rounded-2xl p-4 ring-2 mb-4", SEM_BG[doc.semaphore], SEM_RING[doc.semaphore])}>
           {/* Salu header */}
           <div className="flex items-center gap-2 mb-3">
-            <div className="flex h-7 w-7 items-center justify-center rounded-full bg-white/70">
-              <Zap className="h-4 w-4 text-[#28347c]" strokeWidth={2.5} />
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/80 shadow-sm">
+              <SaluBot size={22} />
             </div>
             <span className="font-[family-name:var(--font-inter)] text-[12.5px] font-bold text-[#28347c]">Análisis de Salu</span>
             <SemIcon className="ml-auto h-4 w-4 shrink-0 opacity-70" />
@@ -493,39 +594,57 @@ function DocDetail({ doc, onBack, onDelete }: { doc: Doc; onBack: () => void; on
 
 // ─── DOCUMENTOS TAB ──────────────────────────────────────────────────────────
 
-function DocCard({ doc, selectMode, selected, onToggle, onOpen }: {
-  doc: Doc; selectMode: boolean; selected: boolean; onToggle: () => void; onOpen: () => void;
+function DocCard({ doc, selectMode, selected, onToggle, onOpen, sparkline }: {
+  doc: Doc; selectMode: boolean; selected: boolean;
+  onToggle: () => void; onOpen: () => void;
+  sparkline?: Semaphore[];
 }) {
+  const CatIcon = CAT_ICON[doc.category];
+
   const inner = (
-    <div className={cn("flex items-center gap-3 rounded-2xl bg-white px-3.5 py-3.5 shadow-[0_2px_10px_rgba(40,52,124,0.05)] ring-1 transition-all",
-      selected ? "ring-[#2b4c9c]/40" : "ring-black/[0.04]")}>
-      {selectMode
-        ? <span className={cn("flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 transition-all",
-            selected ? "border-[#2b4c9c] bg-[#2b4c9c]" : "border-[#cbd5e1] bg-white")}>
-            {selected && <Check className="h-3.5 w-3.5 text-white" strokeWidth={3} />}
-          </span>
-        : <span className={cn("flex h-12 w-12 shrink-0 items-center justify-center rounded-xl", SEM_BG[doc.semaphore])}>
-            <span className={cn("h-2.5 w-2.5 rounded-full", SEM_DOT[doc.semaphore])} aria-hidden />
-          </span>
-      }
-      <div className="min-w-0 flex-1">
-        <p className="truncate font-[family-name:var(--font-inter)] text-[14.5px] font-bold text-[#28347c]">{doc.type}</p>
-        <p className="truncate text-[12px] text-[#64748b]">{doc.lab} · {fmt(doc.date)}</p>
+    <div className={cn(
+      "flex items-stretch overflow-hidden rounded-2xl bg-white transition-all",
+      "shadow-[0_1px_4px_rgba(0,0,0,0.04),0_4px_16px_rgba(43,76,156,0.07)]",
+      selected ? "ring-2 ring-[#2b4c9c]/30" : "ring-1 ring-[#28347c]/[0.05]"
+    )}>
+      {/* Category accent bar */}
+      <span className={cn("w-[3.5px] shrink-0", CAT_ACCENT[doc.category])} aria-hidden />
+
+      <div className="flex flex-1 items-center gap-3 py-3 pl-3 pr-3.5">
+        {selectMode
+          ? <span className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border-2 transition-all",
+              selected ? "border-[#2b4c9c] bg-[#2b4c9c]" : "border-[#e2e8f0] bg-white")}>
+              {selected && <Check className="h-4 w-4 text-white" strokeWidth={2.5} />}
+            </span>
+          : <span className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-xl", CAT_COLOR[doc.category])}>
+              <CatIcon className="h-4.5 w-4.5" strokeWidth={1.8} />
+            </span>
+        }
+
+        <div className="min-w-0 flex-1">
+          <p className="truncate font-[family-name:var(--font-inter)] text-[14px] font-bold text-[#28347c]">{doc.type}</p>
+          <p className="mt-0.5 truncate text-[11px] text-[#28347c]/45">{doc.lab} · {fmt(doc.date)}</p>
+        </div>
+
+        {!selectMode && (
+          <div className="flex shrink-0 flex-col items-end gap-1.5">
+            <div className="flex items-center gap-1">
+              <span className={cn("flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide", SEM_BG[doc.semaphore])}>
+                <span className={cn("h-1.5 w-1.5 rounded-full", SEM_DOT[doc.semaphore])} />
+                {SEM_LABEL[doc.semaphore]}
+              </span>
+              <ChevronRight className="h-3.5 w-3.5 shrink-0 text-[#28347c]/20" />
+            </div>
+            {sparkline && sparkline.length >= 2 && <MiniSparkline values={sparkline} />}
+          </div>
+        )}
       </div>
-      {!selectMode && (
-        <>
-          <span className={cn("rounded-full px-2.5 py-1 text-[10.5px] font-bold uppercase tracking-wider", SEM_BG[doc.semaphore])}>
-            {SEM_LABEL[doc.semaphore]}
-          </span>
-          <ChevronRight className="h-4 w-4 shrink-0 text-[#28347c]" />
-        </>
-      )}
     </div>
   );
 
   return selectMode
-    ? <button type="button" onClick={onToggle} className="w-full text-left">{inner}</button>
-    : <button type="button" onClick={onOpen} className="w-full text-left active:opacity-70">{inner}</button>;
+    ? <button type="button" onClick={onToggle} className="w-full text-left active:scale-[0.97] transition-transform duration-150">{inner}</button>
+    : <button type="button" onClick={onOpen}   className="w-full text-left active:scale-[0.97] transition-transform duration-150">{inner}</button>;
 }
 
 function DocumentosTab({ onOpenDoc }: { onOpenDoc: (doc: Doc) => void }) {
@@ -547,6 +666,14 @@ function DocumentosTab({ onOpenDoc }: { onOpenDoc: (doc: Doc) => void }) {
   const groups = useMemo(() => groupByMonth(filtered), [filtered]);
   const selectedDocs = useMemo(() => docs.filter(d => selected.has(d.id)), [selected, docs]);
 
+  // Compute sparkline values: last 3 semaphores of same type, sorted by date
+  function getSparkline(doc: Doc): Semaphore[] {
+    return docs
+      .filter(d => d.type === doc.type)
+      .sort((a, b) => a.date.localeCompare(b.date))
+      .map(d => d.semaphore);
+  }
+
   function toggle(id: string) {
     setSelected(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
   }
@@ -554,16 +681,16 @@ function DocumentosTab({ onOpenDoc }: { onOpenDoc: (doc: Doc) => void }) {
 
   return (
     <>
-      <div className="shrink-0 bg-white px-5 pb-3 shadow-[0_1px_0_rgba(0,0,0,0.04)]">
+      <div className="shrink-0 bg-white px-4 pb-3 shadow-[0_1px_0_rgba(0,0,0,0.04)]">
         <div className="flex items-center gap-2 pt-3">
           <div className="relative flex-1">
             <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#94a3b8]" />
             <input type="search" placeholder="Buscar documento..." value={query} onChange={e => setQuery(e.target.value)}
-              className="w-full rounded-full bg-[#f1f5f9] py-2.5 pl-10 pr-4 text-[13.5px] text-[#28347c] placeholder:text-[#94a3b8] outline-none focus:ring-2 focus:ring-[#2b4c9c]/30" />
+              className="w-full rounded-full bg-[#f2f5fb] py-2.5 pl-10 pr-4 text-[13.5px] text-[#28347c] placeholder:text-[#94a3b8] outline-none focus:ring-2 focus:ring-[#2b4c9c]/20" />
           </div>
           {!selectMode
             ? <button type="button" onClick={() => setSelectMode(true)}
-                className="shrink-0 rounded-full bg-[#f1f5f9] px-3.5 py-2.5 text-[12.5px] font-semibold text-[#2b4c9c]">
+                className="shrink-0 rounded-full bg-[#f2f5fb] px-3.5 py-2.5 text-[12.5px] font-semibold text-[#28347c]/60">
                 Seleccionar
               </button>
             : <button type="button" onClick={cancel}
@@ -573,41 +700,41 @@ function DocumentosTab({ onOpenDoc }: { onOpenDoc: (doc: Doc) => void }) {
           }
         </div>
         <div className="mt-3 flex gap-2 overflow-x-auto pb-0.5 [&::-webkit-scrollbar]:hidden">
-          {FILTER_CHIPS.map(chip => (
-            <button key={chip.id} type="button" onClick={() => setFilter(chip.id)}
-              className={cn("shrink-0 rounded-full px-3.5 py-1.5 text-[12px] font-semibold transition-all",
-                filter === chip.id ? chip.active : "bg-[#f1f5f9] text-[#64748b]")}>
-              {chip.label}
-            </button>
-          ))}
+          {FILTER_CHIPS.map(chip => {
+            const count = chip.id === "todos" ? docs.length : docs.filter(d => d.category === chip.id).length;
+            return (
+              <button key={chip.id} type="button" onClick={() => setFilter(chip.id)}
+                className={cn("shrink-0 rounded-full px-3.5 py-1.5 text-[12px] font-semibold transition-all",
+                  filter === chip.id ? chip.active : "bg-[#f2f5fb] text-[#28347c]/50")}>
+                {chip.label}{chip.id !== "todos" && count > 0 ? ` (${count})` : ""}
+              </button>
+            );
+          })}
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-5 pt-4 pb-6">
+      <div className="flex-1 overflow-y-auto overscroll-contain bg-[#f2f5fb] px-4 pt-3 pb-6">
         {filtered.length === 0
           ? <div className="mt-16 flex flex-col items-center text-center">
-              <Search className="h-10 w-10 text-[#94a3b8]" strokeWidth={1.5} />
-              <p className="mt-3 text-[14px] font-medium text-[#28347c]">Sin resultados</p>
-              <p className="mt-1 text-[12.5px] text-[#64748b]">Probá con otro término o filtro</p>
+              <SaluBot size={48} />
+              <p className="mt-4 font-[family-name:var(--font-inter)] text-[15px] font-bold text-[#28347c]">Sin resultados</p>
+              <p className="mt-1 text-[13px] text-[#28347c]/45">Probá con otro término o filtro</p>
             </div>
-          : <div className="space-y-7">
+          : <div className="space-y-6">
               {groups.map(group => (
                 <section key={group.label}>
-                  <div className="mb-3 flex items-center gap-3">
-                    <div className="h-px flex-1 bg-black/[0.06]" />
-                    <span className="text-[12px] font-semibold text-[#64748b]">
-                      {group.label}
-                      <span className="ml-1.5 font-normal text-[#94a3b8]">
-                        · {group.items.length} {group.items.length === 1 ? "documento" : "documentos"}
-                      </span>
-                    </span>
-                    <div className="h-px flex-1 bg-black/[0.06]" />
+                  {/* Sticky month header */}
+                  <div className="sticky top-0 z-10 -mx-4 mb-2 bg-[#f2f5fb]/90 px-4 py-1.5 backdrop-blur-sm">
+                    <p className="text-[11px] font-bold uppercase tracking-wide text-[#28347c]/40">
+                      {group.label} <span className="font-normal">· {group.items.length}</span>
+                    </p>
                   </div>
-                  <div className="space-y-2.5">
+                  <div className="space-y-2">
                     {group.items.map(doc => (
                       <DocCard key={doc.id} doc={doc} selectMode={selectMode}
                         selected={selected.has(doc.id)} onToggle={() => toggle(doc.id)}
-                        onOpen={() => onOpenDoc(doc)} />
+                        onOpen={() => onOpenDoc(doc)}
+                        sparkline={getSparkline(doc)} />
                     ))}
                   </div>
                 </section>
@@ -639,29 +766,115 @@ function DocumentosTab({ onOpenDoc }: { onOpenDoc: (doc: Doc) => void }) {
 
 // ─── RECORDATORIOS TAB ───────────────────────────────────────────────────────
 
-function RemCard({ r, dimmed = false, today = false }: { r: Reminder; dimmed?: boolean; today?: boolean }) {
-  const Icon = REM_ICON[r.category];
+function AnterioresScreen({ onBack }: { onBack: () => void }) {
+  const [visible, setVisible] = useState(false);
+  const past = REMINDERS.filter(r => r.date < TODAY).sort((a, b) => b.date.localeCompare(a.date));
+
+  useEffect(() => { requestAnimationFrame(() => setVisible(true)); }, []);
+  function handleBack() { setVisible(false); setTimeout(onBack, 280); }
+
   return (
-    <div className={cn("rounded-2xl bg-white px-3.5 py-3.5 shadow-[0_2px_10px_rgba(40,52,124,0.05)] ring-1 transition-all",
-      dimmed ? "opacity-50 ring-black/[0.03]" : "ring-black/[0.04]",
-      today && "ring-2 ring-[#2b4c9c]/20")}>
-      <div className="flex items-start gap-3">
-        <span className={cn("flex h-11 w-11 shrink-0 items-center justify-center rounded-xl",
-          dimmed ? "bg-[#f1f5f9] text-[#94a3b8]" : REM_TINT[r.category])}>
-          {dimmed ? <Check className="h-5 w-5" strokeWidth={2} /> : <Icon className="h-5 w-5" strokeWidth={1.8} />}
-        </span>
-        <div className="min-w-0 flex-1">
-          <p className="text-[10.5px] font-bold uppercase tracking-wider text-[#94a3b8]">{REM_LABEL[r.category]}</p>
-          <p className="mt-0.5 font-[family-name:var(--font-inter)] text-[14.5px] font-bold leading-snug text-[#28347c]">{r.title}</p>
-          <p className="mt-1 text-[12px] text-[#64748b]">{fmt(r.date)} · {r.time} hs</p>
-          {r.description && <p className="mt-1 text-[12px] leading-snug text-[#94a3b8]">{r.description}</p>}
+    <div className={cn(
+      "absolute inset-0 z-30 flex flex-col bg-white transition-transform duration-[280ms] ease-out",
+      visible ? "translate-x-0" : "translate-x-full"
+    )}>
+      <div className="shrink-0 bg-gradient-to-r from-[#2b4c9c] to-[#28347c] px-4 pt-12 pb-4 shadow-[0_2px_12px_rgba(40,52,124,0.25)]">
+        <div className="flex items-center gap-3">
+          <button type="button" onClick={handleBack}
+            className="flex h-9 w-9 items-center justify-center rounded-full bg-white/20 text-white active:bg-white/30 transition-colors">
+            <ArrowLeft className="h-5 w-5" />
+          </button>
+          <div>
+            <p className="font-[family-name:var(--font-inter)] text-[16px] font-bold text-white">Historial de recordatorios</p>
+            <p className="text-[12px] text-white/60">{past.length} {past.length === 1 ? "recordatorio anterior" : "recordatorios anteriores"}</p>
+          </div>
         </div>
+      </div>
+      {/* Stats strip */}
+      <div className="shrink-0 border-b border-black/[0.04] bg-white px-5 py-3">
+        <p className="text-[12px] text-[#28347c]/40">
+          <span className="font-bold text-[#28347c]">{past.length}</span> recordatorio{past.length !== 1 ? "s" : ""} completado{past.length !== 1 ? "s" : ""}
+        </p>
+      </div>
+
+      <div className="flex-1 overflow-y-auto overscroll-contain bg-[#f2f5fb] px-4 pt-3 pb-6">
+        {past.length === 0 ? (
+          <div className="mt-16 flex flex-col items-center text-center">
+            <SaluBot size={44} />
+            <p className="mt-4 text-[14px] font-medium text-[#28347c]">Sin recordatorios anteriores</p>
+          </div>
+        ) : (
+          <div className="space-y-5">
+            {(() => {
+              const byMonth = new Map<string, Reminder[]>();
+              for (const r of past) {
+                const [y, m] = r.date.split("-");
+                const key = `${y}-${m}`;
+                if (!byMonth.has(key)) byMonth.set(key, []);
+                byMonth.get(key)!.push(r);
+              }
+              return [...byMonth.entries()]
+                .sort((a, b) => b[0].localeCompare(a[0]))
+                .map(([key, items]) => {
+                  const [y, m] = key.split("-");
+                  const label = `${MONTHS[+m - 1]} ${y}`;
+                  return (
+                    <section key={key}>
+                      <div className="sticky top-0 z-10 -mx-4 mb-2 bg-[#f2f5fb]/90 px-4 py-1.5 backdrop-blur-sm">
+                        <p className="text-[11px] font-bold uppercase tracking-wide text-[#28347c]/40">
+                          {label} <span className="font-normal">· {items.length}</span>
+                        </p>
+                      </div>
+                      <div className="space-y-2">
+                        {items.map(r => <RemCard key={r.id} r={r} variant="past" />)}
+                      </div>
+                    </section>
+                  );
+                });
+            })()}
+          </div>
+        )}
       </div>
     </div>
   );
 }
 
-function RecordatoriosTab() {
+type RemVariant = "today" | "upcoming" | "past";
+
+function RemCard({ r, variant = "upcoming" }: { r: Reminder; variant?: RemVariant }) {
+  const Icon = REM_ICON[r.category];
+  const accentColor = variant === "today" ? "bg-[#ee742f]" : variant === "upcoming" ? "bg-[#2b4c9c]" : "bg-[#cbd5e1]";
+  const isPast = variant === "past";
+
+  return (
+    <div className={cn(
+      "flex overflow-hidden rounded-2xl bg-white shadow-[0_1px_4px_rgba(0,0,0,0.06),0_4px_12px_rgba(43,76,156,0.06)] ring-1 transition-all",
+      isPast ? "opacity-50 ring-black/[0.03]" : "ring-black/[0.05]",
+      variant === "today" && "shadow-[0_2px_8px_rgba(238,116,47,0.15),0_4px_16px_rgba(238,116,47,0.08)]"
+    )}>
+      {/* Accent bar */}
+      <span className={cn("w-[3.5px] shrink-0 self-stretch", accentColor)} aria-hidden />
+
+      <div className="flex flex-1 items-start gap-3 px-3 py-3.5">
+        <span className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-xl",
+          isPast ? "bg-[#f1f5f9] text-[#94a3b8]" : REM_TINT[r.category])}>
+          {isPast ? <Check className="h-4.5 w-4.5" strokeWidth={2} /> : <Icon className="h-5 w-5" strokeWidth={1.8} />}
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="text-[10.5px] font-bold uppercase tracking-wider text-[#94a3b8]">{REM_LABEL[r.category]}</p>
+          <p className="mt-0.5 font-[family-name:var(--font-inter)] text-[14px] font-bold leading-snug text-[#28347c]">{r.title}</p>
+          <p className="mt-1 text-[12px] text-[#64748b]">{fmt(r.date)} · {r.time} hs</p>
+          {r.description && <p className="mt-1 text-[12px] leading-snug text-[#94a3b8]">{r.description}</p>}
+        </div>
+        {variant === "today" && (
+          <span className="shrink-0 self-start rounded-full bg-[#fff7ed] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[#ee742f]">Hoy</span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function RecordatoriosTab({ onOpenAnteriores }: { onOpenAnteriores: () => void }) {
   const past     = REMINDERS.filter(r => r.date < TODAY).sort((a, b) => b.date.localeCompare(a.date));
   const todayRem = REMINDERS.filter(r => r.date === TODAY).sort((a, b) => a.time.localeCompare(b.time));
   const upcoming = REMINDERS.filter(r => r.date > TODAY).sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time));
@@ -678,32 +891,46 @@ function RecordatoriosTab() {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-5 pt-4 pb-6 space-y-5">
-        {past.length > 0 && (
+      <div className="flex-1 overflow-y-auto overscroll-contain bg-[#f2f5fb] px-5 pt-4 pb-6 space-y-5">
+
+        {/* Hoy */}
+        <section>
+          <div className="mb-2.5 flex items-center gap-2">
+            <span className="rounded-full bg-[#ee742f] px-2.5 py-0.5 text-[10.5px] font-bold uppercase tracking-wider text-white">Hoy</span>
+            <span className="text-[12px] text-[#94a3b8]">{fmt(TODAY)}</span>
+          </div>
+          {todayRem.length > 0
+            ? <div className="space-y-2">{todayRem.map(r => <RemCard key={r.id} r={r} variant="today" />)}</div>
+            : <p className="rounded-2xl bg-white px-4 py-4 text-[13px] text-[#94a3b8] shadow-[0_1px_4px_rgba(0,0,0,0.04)] ring-1 ring-black/[0.04]">Sin recordatorios para hoy</p>
+          }
+        </section>
+
+        {/* Próximos */}
+        {upcoming.length > 0 && (
           <section>
-            <p className="mb-2 text-[11px] font-bold uppercase tracking-wider text-[#94a3b8]">Anteriores</p>
-            <div className="space-y-2">{past.map(r => <RemCard key={r.id} r={r} dimmed />)}</div>
+            <div className="mb-2.5 flex items-center gap-2">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-[#64748b]">Próximos</span>
+              <span className="rounded-full bg-[#e8f4fb] px-2 py-0.5 text-[10.5px] font-bold text-[#2b4c9c]">{upcoming.length}</span>
+            </div>
+            <div className="space-y-2">{upcoming.map(r => <RemCard key={r.id} r={r} variant="upcoming" />)}</div>
           </section>
         )}
 
-        <div className="flex items-center gap-3">
-          <div className="h-px flex-1 bg-[#e2e8f0]" />
-          <span className="rounded-full bg-[#28347c] px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-white">
-            Hoy · {fmt(TODAY)}
-          </span>
-          <div className="h-px flex-1 bg-[#e2e8f0]" />
-        </div>
-
-        {todayRem.length > 0
-          ? <div className="space-y-2">{todayRem.map(r => <RemCard key={r.id} r={r} today />)}</div>
-          : <p className="text-center text-[13px] text-[#94a3b8]">Sin recordatorios para hoy</p>
-        }
-
-        {upcoming.length > 0 && (
-          <section>
-            <p className="mb-2 text-[11px] font-bold uppercase tracking-wider text-[#64748b]">Próximos</p>
-            <div className="space-y-2">{upcoming.map(r => <RemCard key={r.id} r={r} />)}</div>
-          </section>
+        {/* Anteriores — acceso a sub-pantalla */}
+        {past.length > 0 && (
+          <button type="button" onClick={onOpenAnteriores}
+            className="flex w-full items-center justify-between rounded-2xl bg-white px-4 py-3.5 shadow-[0_1px_4px_rgba(0,0,0,0.06),0_4px_12px_rgba(43,76,156,0.06)] ring-1 ring-black/[0.05] active:scale-[0.98] transition-transform duration-150">
+            <div className="flex items-center gap-3">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#f1f5f9] text-[#64748b]">
+                <Calendar className="h-4 w-4" />
+              </span>
+              <div className="text-left">
+                <p className="font-[family-name:var(--font-inter)] text-[14px] font-semibold text-[#28347c]">Recordatorios anteriores</p>
+                <p className="text-[12px] text-[#94a3b8]">{past.length} {past.length === 1 ? "anterior" : "anteriores"}</p>
+              </div>
+            </div>
+            <ChevronRight className="h-4 w-4 shrink-0 text-[#94a3b8]" />
+          </button>
         )}
       </div>
     </>
@@ -713,9 +940,10 @@ function RecordatoriosTab() {
 // ─── PAGE ─────────────────────────────────────────────────────────────────────
 
 export default function Page() {
-  const [activeTab, setActiveTab] = useState<ActiveTab>("documentos");
-  const [openDoc, setOpenDoc]     = useState<Doc | null>(null);
-  const [docs, setDocs]           = useState<Doc[]>(DOCS);
+  const [activeTab, setActiveTab]           = useState<ActiveTab>("documentos");
+  const [openDoc, setOpenDoc]               = useState<Doc | null>(null);
+  const [docs, setDocs]                     = useState<Doc[]>(DOCS);
+  const [anterioresOpen, setAnterioresOpen] = useState(false);
 
   function handleDelete(id: string) {
     setDocs(prev => prev.filter(d => d.id !== id));
@@ -724,16 +952,33 @@ export default function Page() {
 
   return (
     <div className="relative flex h-dvh flex-col overflow-hidden">
-      {/* Sticky header */}
-      <div className="shrink-0 bg-white shadow-[0_1px_0_rgba(0,0,0,0.06)] px-5 pt-12 pb-3">
-        <h1 className="font-[family-name:var(--font-inter)] text-[24px] font-bold tracking-tight text-[#28347c]">
-          Historial
-        </h1>
+      {/* Sticky header — blanco limpio */}
+      <div className="shrink-0 bg-white px-5 pt-11 pb-4 shadow-[0_1px_0_rgba(0,0,0,0.05)]">
+        {/* Status bar */}
+        <div className="mb-3 flex items-center justify-between">
+          <span className="font-[family-name:var(--font-inter)] text-[12px] font-semibold text-[#94a3b8]">09:41</span>
+        </div>
+
+        {/* Title + summary */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-end gap-2">
+            <h1 className="font-[family-name:var(--font-inter)] text-[26px] font-bold tracking-tight text-[#28347c]">
+              Historial
+            </h1>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/salu-waving.png" alt="Salu" className="mb-0.5 h-9 w-auto object-contain drop-shadow-sm" />
+          </div>
+        </div>
+        <p className="mt-0.5 text-[13px] text-[#94a3b8]">{docs.length} documentos</p>
+
+        {/* Tab switcher */}
         <div className="mt-3 flex rounded-full bg-[#f1f5f9] p-1">
           {(["documentos", "recordatorios"] as const).map(tab => (
             <button key={tab} type="button" onClick={() => setActiveTab(tab)}
-              className={cn("flex-1 rounded-full py-2 text-[13.5px] font-semibold transition-all",
-                activeTab === tab ? "bg-[#2b4c9c] text-white shadow-sm" : "text-[#64748b]")}>
+              className={cn("flex-1 rounded-full py-2 text-[13.5px] font-semibold transition-all duration-200",
+                activeTab === tab
+                  ? "bg-white text-[#28347c] shadow-sm"
+                  : "text-[#64748b]")}>
               {tab === "documentos" ? "Documentos" : "Recordatorios"}
             </button>
           ))}
@@ -742,7 +987,7 @@ export default function Page() {
 
       {activeTab === "documentos"
         ? <DocumentosTab onOpenDoc={setOpenDoc} key={docs.length} />
-        : <RecordatoriosTab />
+        : <RecordatoriosTab onOpenAnteriores={() => setAnterioresOpen(true)} />
       }
 
       {/* Doc detail overlay — slides in from right */}
@@ -753,6 +998,9 @@ export default function Page() {
           onDelete={handleDelete}
         />
       )}
+
+      {/* Anteriores sub-screen — slides in from right */}
+      {anterioresOpen && <AnterioresScreen onBack={() => setAnterioresOpen(false)} />}
 
       {/* Suppress unused */}
       <span className="hidden">{docs.length}<Bell /><AlertTriangle /></span>
