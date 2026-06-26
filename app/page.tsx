@@ -534,8 +534,10 @@ function DocDetail({ doc, onBack, onDelete }: { doc: Doc; onBack: () => void; on
         <div className={cn("rounded-2xl p-4 ring-2 mb-4", SEM_BG[doc.semaphore], SEM_RING[doc.semaphore])}>
           {/* Salu header */}
           <div className="flex items-center gap-2 mb-3">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/salu-lightbulb.png" alt="Salu" className="h-10 w-auto object-contain drop-shadow-sm" />
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white shadow-sm">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/salu-lightbulb.png" alt="Salu" className="h-10 w-10 object-contain" />
+            </div>
             <span className="font-[family-name:var(--font-inter)] text-[12.5px] font-bold text-[#28347c]">Análisis de Salu</span>
             <SemIcon className="ml-auto h-4 w-4 shrink-0 opacity-70" />
           </div>
