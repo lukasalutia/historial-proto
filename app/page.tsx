@@ -961,7 +961,7 @@ export default function Page() {
             <button key={tab} type="button" onClick={() => setActiveTab(tab)}
               className={cn("flex-1 rounded-full py-2 text-[13.5px] font-semibold transition-all duration-200",
                 activeTab === tab
-                  ? "bg-white text-[#28347c] shadow-sm"
+                  ? "bg-[#28347c] text-white shadow-sm"
                   : "text-[#64748b]")}>
               {tab === "documentos" ? "Documentos" : "Recordatorios"}
             </button>
